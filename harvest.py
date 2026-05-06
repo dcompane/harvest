@@ -22,12 +22,12 @@ Deploy:
 
 Config:
 - Config Servers
-- Per‑server Definitions (optional)
-- Per‑server Agents (optional)
+- Per-server Definitions (optional)
+- Per-server Agents (optional)
 
 SAFE FOR LARGE ENVIRONMENTS
 ===========================
-No bulk download of all jobs. All job inspection is folder‑scoped.
+No bulk download of all jobs. All job inspection is folder-scoped.
 """
 
 from __future__ import annotations
