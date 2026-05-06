@@ -1,0 +1,203 @@
+"""
+Control-M Automation API client for harvesting metadata.
+"""
+
+from typing import Any, Dict, Optional
+from dataclasses import dataclass
+import json
+from xmlrpc import server
+import Utility
+from Utility import print_debug
+import requests
+import urllib3
+# Disable only the InsecureRequestWarning
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# =============================================================================
+# Authentication
+# =============================================================================
+
+@dataclass
+class Auth:
+    """Authentication credentials for Control-M API."""
+    api_key: Optional[str] = None
+    bearer_token: Optional[str] = None
+
+
+class ControlMApi:
+    """Client for interacting with the Control-M Automation API."""
+    def __init__(self, base_url: str, auth: Auth, timeout: int = 60):
+        self.base_url = base_url.rstrip("/")
+        self.timeout = timeout
+        self.session = requests.Session()
+        # self.session.headers["Accept"] = "application/json"
+        self.session.headers["Accept"] = "*/*"
+        self.session.headers["x-api-key"] = auth.api_key
+
+    def _get(self, path: str, params: Optional[Dict[str, Any]] = None, 
+             headers: Optional[Dict[str, Any]] = None) -> Any:
+        """Internal method to perform a GET request to the Control-M API."""
+        path = path if path.startswith("/") else "/" + path
+        url = f"{self.base_url}{path}"
+        query = {key: value for key, value in (params or {}).items() if value is not None}
+        request_headers = {k: v for k, v in (headers or {}).items() if v is not None}
+
+        # Merge headers: session defaults + per-request overrides
+        merged_headers = dict(self.session.headers)
+        merged_headers.update(request_headers)  # overwrite duplicates
+
+        # print_debug(f"URL: {url}", Utility.debug)
+
+        # print_debug(f"Session headers: {self.session.headers}", Utility.debug)
+        # print_debug(f"Request headers: {request_headers}", Utility.debug)
+        # print_debug(f"Effective headers: {merged_headers}", Utility.debug)
+
+        # print_debug(f"Query: {query}", Utility.debug)
+
+        r = self.session.get(
+            url,
+            params=query,
+            headers=merged_headers,
+            timeout=self.timeout,
+            verify=False,
+        )
+
+        try:
+            return r.json()
+        except ValueError:
+            return r.text
+
+    # ---- Status / Metadata ----
+    def get_status(self):
+        """Return the Control-M Automation API status metadata."""
+        print ("Getting status...")
+        return self._get("/status")
+
+    def get_version(self):
+        """Return the Control-M Automation API status metadata."""
+        print ("Getting version...")
+        return self._get("/build_time.txt")
+
+    # ---- Build ----
+    def build(  self, data: Dict[str, Any]):
+        """Return the authentication tokens."""
+        print ("Getting authentication tokens...")
+        return self._get("/build", params=data)
+
+    # ---- Auth ----
+    # GET/authentication/tokens
+    def auth_tokens(self):
+        """Return the authentication tokens."""
+        print ("Getting authentication tokens...")
+        return self._get("/authentication/tokens")
+
+    # ---- Config ----
+    ## ---- Config - Archive ----
+    # GET/config/archive/rules
+    def config_archive_rules(self):
+        """Return the Control-M Archive Rules."""
+        print(f"Getting Control-M Archive Rules...")
+        return self._get(f"/config/archive/rules")
+    
+    # GET/config/archive/statistics
+    def config_archive_statistics(self):
+        """Return the Control-M Archive Statistics."""
+        print(f"Getting Control-M Archive Statistics...")
+        return self._get(f"/config/archive/statistics")
+
+
+
+    ## ---- Config - Servers ----
+    def config_servers(self):
+        """Return the Control-M Servers."""
+        print("Getting Control-M Servers...")
+        return self._get("/config/servers")
+
+    def config_server_definition(self, server: str):
+        """Return the Control-M Servers configuration definition."""
+        print(f"Getting configuration definition for server {server}...")
+        return self._get(f"/config/server/{server}/definition")
+
+    ## ---- Config - Agents ----
+    def config_agents(self, server: str):
+        """Return the Control-M Agents for the specified server."""
+        print(f"Getting Control-M Agents for server {server}...")  
+        return self._get(f"/config/server/{server}/agents")
+
+    ## ---- Config - HostGroups ----
+    def config_hostgroups(self, server: str):
+        """Return the Control-M HostGroups for the specified server."""
+        print(f"Getting Control-M HostGroups for server {server}...")  
+        return self._get(f"/config/server/{server}/hostgroups/agents")
+
+    ## ---- Config - Agentless Hosts ----
+    def config_agentlesshosts(self, server: str):
+        """Return the Control-M Agentless Hosts for the specified server."""
+        print(f"Getting Control-M Agentless Hosts for server {server}...")  
+        return self._get(f"/config/server/{server}/agentlesshosts")
+
+    ## ---- Config - Agentless Host Properties ----
+    def config_agentlesshost(self, server: str, agent: str):
+        """Return the Control-M Agentless Host properties for the specified server/agent."""
+        print(f"Getting Control-M Agentless Host for server {server} and agent {agent}...")  
+        return self._get(f"/config/server/{server}/agentlesshost/{agent}")
+
+    ## ---- Config - Runasuser ----
+    def config_runasusers(self, server: str):
+        """Return the Control-M Runasusers for the specified server."""
+        print(f"Getting Control-M Runasusers for server {server}...")
+        return self._get(f"/config/server/{server}/runasusers")
+
+
+    ##############################################################################
+
+    def config_systemsettings(self):
+        """Return the Control-M System Settings."""
+        print("Getting Control-M System Settings...")
+        return self._get("/config/systemsettings")
+
+    # ---- Provision ----
+    ## ---- Provision - Images ----
+    def provision_images(self, os: str = "Linux"):
+        """Return the available provision images."""
+        print(f"Getting Control-M Provision Images for OS {os}...")
+        return self._get(f"/provision/images/{os}")
+    
+    ## ---- Provision - Environments ----
+    def provision_upgrades(self):
+        """Return the available provision environments."""
+        print("Getting Control-M Provision Upgrades...")
+        return self._get("/provision/upgrades/agents")
+    
+
+    # ---- Deploy ----
+    ## ---- Deploy - Folders ----
+    def deploy_folders(self, server: str, folder: Optional[str] = "*"):
+        """
+        Return the folders on the specific Control-M Server, 
+          optionally filtered by folder name and z/OS library.
+        """
+        return self._get(f"/deploy/folders?server={server}&folder={folder}")
+
+
+
+    # ---- Deploy ----
+    ## ---- Deploy - Folders ----
+    def deploy_folders(self, server: str, folder: Optional[str] = "*"):
+        """
+        Return the folders on the specific Control-M Server, 
+          optionally filtered by folder name and z/OS library.
+        """
+        return self._get(f"/deploy/folders?server={server}&folder={folder}")
+
+    ## ---- Deploy - Jobs ----
+    def deploy_jobs(self, server: str, folder: Optional[str] = "*"):
+        """Return the Control-M Jobs for the specified server and folder."""
+        return self._get(f"/deploy/jobs?server={server}&folder={folder}&useArrayFormat=True")
+
+    
+# =============================================================================
+# Main
+# =============================================================================
+if __name__ == "__main__":
+    assert "You should not see this message" == "This file is not meant to be run directly."
