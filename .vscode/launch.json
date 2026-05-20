@@ -54,7 +54,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["--include", "deploy", "--debug", "False", "--base-url", "https://se-dev-aapi.sandbox.us1.controlm.com/automation-api", "--api-key", "UFJEU0xDOmQ3NDlkNjg3LWUyYTUtNDRiMS1hMzIzLTBlODBmZTFkNTJmZTpsM01KZUU4ZE5SZVdXaGNraGQ2SW1aOWRncFVGSURnUmhGWDRBSFFHb2trPQ=="],
+            "args": ["--include", "deploy,config,auth,provision", "--debug", "False", "--base-url", "https://se-dev-aapi.sandbox.us1.controlm.com/automation-api", "--api-key", "UFJEU0xDOmQ3NDlkNjg3LWUyYTUtNDRiMS1hMzIzLTBlODBmZTFkNTJmZTpsM01KZUU4ZE5SZVdXaGNraGQ2SW1aOWRncFVGSURnUmhGWDRBSFFHb2trPQ=="],
             "justMyCode": false
         },
         {
@@ -63,7 +63,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["--include", "deploy", "--debug", "False","--base-url", "https://dc01:8444/automation-api", "--api-key", "b25QcmVtOjMxMmY2NWZmLTI1MTEtNDY4ZC04NzdmLThmZTVlMjk2NDcwNQ=="],
+            "args": ["--include", "deploy,config,auth,provision", "--base-url", "https://dc01:8444/automation-api", "--api-key", "b25QcmVtOjMxMmY2NWZmLTI1MTEtNDY4ZC04NzdmLThmZTVlMjk2NDcwNQ=="],
             "justMyCode": false
         },
 

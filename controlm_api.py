@@ -105,7 +105,13 @@ class ControlMApi:
         print(f"Getting Control-M Archive Statistics...")
         return self._get(f"/config/archive/statistics")
 
-
+    ## ---- Config - EM System Settings ----
+    def config_systemsettings(self, ctm : Optional[str] = None):
+        """Return the Control-M EM System Settings."""
+        print(f"Getting Control-M {ctm if ctm else 'EM'} System Settings...")
+        if ctm:
+            endpoint = f"?server={ctm}"
+        return self._get(f"/config/systemsettings{endpoint if ctm else ''}")
 
     ## ---- Config - Servers ----
     def config_servers(self):
@@ -151,11 +157,6 @@ class ControlMApi:
 
     ##############################################################################
 
-    def config_systemsettings(self):
-        """Return the Control-M System Settings."""
-        print("Getting Control-M System Settings...")
-        return self._get("/config/systemsettings")
-
     # ---- Provision ----
     ## ---- Provision - Images ----
     def provision_images(self, os: str = "Linux"):
@@ -163,14 +164,26 @@ class ControlMApi:
         print(f"Getting Control-M Provision Images for OS {os}...")
         return self._get(f"/provision/images/{os}")
     
-    ## ---- Provision - Environments ----
-    def provision_upgrades(self):
+    ## ---- Provision - upgrades ----
+    def provision_upgrades(self,type: str = "Agent"):
         """Return the available provision environments."""
-        print("Getting Control-M Provision Upgrades...")
-        return self._get("/provision/upgrades/agents")
+        print(f"Getting Control-M Provision {type} Upgrades...")
+        return self._get(f"/provision/upgrades/agents?type={type}")
+    
+    def provision_upgrade_versions(self):
+        """Return the available provision environments."""
+        print("Getting Avalaible Provision Upgrades...")
+        return self._get("/provision/upgrades/versions")
     
 
     # ---- Deploy ----
+    ## ---- Deploy - Jobtypes ----
+    def deploy_jobtypes(self):
+        """
+        Return the Client developed jobtypes available to the EM
+        """
+        return self._get("/deploy/ai/jobtypes")
+
     ## ---- Deploy - Folders ----
     def deploy_folders(self, server: str, folder: Optional[str] = "*"):
         """

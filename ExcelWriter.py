@@ -1,10 +1,11 @@
 # =============================================================================
 # Excel Writer
 # =============================================================================
-
-from turtle import title
+import os
+import platform
 from typing import Any, Optional
 import json
+
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import Table, TableStyleInfo
@@ -37,8 +38,8 @@ class ExcelWorkbookWriter:
         direction: str = "horizontal",
         gap_rows: int =2,
         table_title: str = None,
-        description: str = None
-
+        description: str = None,
+        columns: Optional[list] = None
     ):
         """
         Add a dataset to an existing sheet as a separate table.
@@ -69,12 +70,18 @@ class ExcelWorkbookWriter:
             ws.append([""])  # Add an empty row for spacing after title/description
             start_row = ws.max_row + 1  # Update start_row after adding title/description
 
-
         headers, rows = self._normalize_data(data,direction=direction)
+
+        if columns:
+            for i in range(max(len(headers), len(columns))):
+                if i < min(len(headers), len(columns)):
+                    headers[i] = columns[i]
+                elif i >= len(headers) and i <= len(columns):
+                    headers.append(columns[i])
 
         # Write headers
         ws.append(headers)
-        header_row = start_row
+        header_row = start_row 
 
         if any(isinstance(item, list) for item in rows):
             # Single row of data - treat headers as keys and values as a single row
@@ -82,9 +89,9 @@ class ExcelWorkbookWriter:
         else:
             nested_rows = [rows] # Ensure it's a list of rows, even if there's only one
 
-        # Write rows
+            # Write rows
         for row in nested_rows:
-            ws.append(row)
+            ws.append(self._convert_types(row))
 
         end_row = header_row + len(nested_rows)
         end_col = len(headers)
@@ -194,6 +201,130 @@ class ExcelWorkbookWriter:
             ws.column_dimensions[get_column_letter(col[0].column)].width = min(
                 max_len + 2, 60
             )
+
+    # Convert numeric-looking strings to actual numbers
+    def _convert_types(self,row):
+        converted = []
+        for value in row:
+            # Try converting to int or float
+            if isinstance(value, str):
+                try:
+                    if "." in value:
+                        converted.append(float(value))
+                    else:
+                        converted.append(int(value))
+                except ValueError:
+                    converted.append(value)  # Keep as string if not numeric
+            else:
+                converted.append(value)
+        return converted
+
+
+
+
+win32com = None
+
+# ---------------------------------------------------------
+# 1. Check if OS is Windows
+# ---------------------------------------------------------
+def is_windows() -> bool:
+    """Return True if the OS is Windows."""
+    pfrm =  platform.system().lower() == "windows" 
+    if pfrm:
+        # Only import COM libraries if actually needed later
+        try:
+            import win32com.client
+        except ImportError:
+            pass
+    return pfrm
+
+# ---------------------------------------------------------
+# 2. Check if Excel is available (COM automation)
+# ---------------------------------------------------------
+def is_excel_available() -> bool:
+    """
+    Check if Microsoft Excel is available via COM.
+
+    Returns:
+        True if Excel can be launched, False otherwise.
+    """
+    if not is_windows() or win32com is None:
+        return False
+
+    try:
+        excel = win32com.client.Dispatch("Excel.Application")
+        excel.Quit()
+        return True
+    except Exception:
+        return False
+
+
+# ---------------------------------------------------------
+# 3. Check if file exists
+# ---------------------------------------------------------
+def file_exists(file_path: str) -> bool:
+    """Return True if the file exists."""
+    return os.path.isfile(file_path)
+
+
+# ---------------------------------------------------------
+# 4. Open Excel workbook and worksheet
+# ---------------------------------------------------------
+def open_excel_worksheet(
+    file_path: str,
+    sheet_name: Optional[str] = None,
+    visible: bool = True
+):
+    """
+    Open an Excel file and optionally select a worksheet.
+
+    Args:
+        file_path: Path to Excel file
+        sheet_name: Optional sheet name (default = first sheet)
+        visible: Whether Excel UI should be visible
+
+    Returns:
+        (excel_app, workbook, worksheet)
+
+    Raises:
+        RuntimeError if any requirement is not met.
+    """
+
+    # --- Environment validation ---
+    if not is_windows():
+        raise RuntimeError("Excel automation requires Windows OS.")
+
+    if not is_excel_available():
+        raise RuntimeError("Microsoft Excel is not available.")
+
+    if not file_exists(file_path):
+        raise RuntimeError(f"File does not exist: {file_path}")
+
+    # --- Open Excel ---
+    excel = win32com.client.Dispatch("Excel.Application")
+    excel.Visible = visible
+
+    workbook = excel.Workbooks.Open(file_path)
+
+    # Select worksheet
+    if sheet_name:
+        worksheet = workbook.Worksheets(sheet_name)
+    else:
+        worksheet = workbook.Worksheets(1)
+
+    return excel, workbook, worksheet
+
+
+# ---------------------------------------------------------
+# 5. Cleanup helper (recommended)
+# ---------------------------------------------------------
+def close_excel(excel, workbook, save: bool = False):
+    """Safely close workbook and Excel instance."""
+    if workbook:
+        workbook.Close(SaveChanges=save)
+    if excel:
+        excel.Quit()
+
 
 # =============================================================================
 # Main

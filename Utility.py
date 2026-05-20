@@ -1,5 +1,8 @@
 from collections import defaultdict
 from collections.abc import Mapping
+from fnmatch import fnmatch
+from typing import Any, Dict, Optional, Iterable, Tuple, List
+
 
 debug = False
 isSaaS = False
@@ -22,36 +25,231 @@ def print_debug(string: str, debug):
     if debug:
         print(string)
 
-def count_key_value_matches(data_list, key, prefix):
+
+def count_key_value_matches(
+    obj: Any,
+    key_pattern: str,
+    value_pattern: str,
+    parent_key_pattern: Optional[str] = None
+) -> Tuple[int, int]:
     """
-    Counts how many dictionaries in the list have the given key with the specified value.
-    
+    Recursively count occurrences of keys matching `key_pattern`
+    whose values match `value_pattern`, and return the deepest level
+    at which such a key was found.
+
     Args:
-        data_list (list): List of dictionaries.
-        key (str): Key to check.
-        value: Value to match.
-    
+        obj: The input object (dict, list, or scalar).
+        key_pattern: Glob pattern for matching keys.
+        value_pattern: Glob pattern for matching string values.
+        parent_key_pattern: Optional glob pattern for immediate parent key.
+
     Returns:
-        int: Number of matching dictionaries.
+        (count, deepest_level)
+        deepest_level will be -1 if no matches are found.
     """
 
-    prefix = prefix[:3]  # Ensure only first 3 letters are used
+    def _recurse(current: Any, parent_key: Optional[str], depth: int) -> Tuple[int, int]:
+        count = 0
+        max_depth = -1
 
-    if not isinstance(data_list, list):
-        raise TypeError("data_list must be a list of dictionaries.")
+        if isinstance(current, dict):
+            for k, v in current.items():
+                # Check key match
+                if fnmatch(str(k), key_pattern):
+                    parent_ok = (
+                        parent_key_pattern is None
+                        or (parent_key is not None and fnmatch(str(parent_key), parent_key_pattern))
+                    )
 
-    count = 0
+                    if parent_ok and isinstance(v, str) and fnmatch(v, value_pattern):
+                        count += 1
+                        max_depth = max(max_depth, depth)
 
-    for item in data_list:
-        if not isinstance(item, dict):
-            continue  # Skip non-dictionary items safely
-        value = item.get(key)
-        print_debug(f"{key}:{value}", debug)
-        if isinstance(value, str) and value.lower().startswith(prefix):
-            count += 1
+                # Recurse deeper
+                sub_count, sub_depth = _recurse(v, k, depth + 1)
+                count += sub_count
+                max_depth = max(max_depth, sub_depth)
 
-    return count
+        elif isinstance(current, list):
+            for item in current:
+                sub_count, sub_depth = _recurse(item, parent_key, depth + 1)
+                count += sub_count
+                max_depth = max(max_depth, sub_depth)
 
+        return int(count), int(max_depth)
+
+    return _recurse(obj, None, 0)
+
+###############################################################################
+
+def extract_key_paths(data, keys):
+    results = []
+    # set()  # use a set for uniqueness
+
+    def walk(node):
+        if isinstance(node, dict):
+            # Process current node
+            first_key = keys[0]
+            if first_key in node:
+                path = {}
+                for key in keys:
+                    if key in node:
+                        path[key] = node[key]
+                    # else:
+                    #     break
+                results.append(path)  # store as tuple for uniqueness
+            # Recurse all values generically
+            for value in node.values():
+                walk(value)
+
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(data)
+
+    # Convert back to list of lists
+    return results
+
+##############################################################################
+#HERE
+
+def count_job_combinations(
+    data,
+    key_order,
+    count_key_pattern: Optional[str] = None,
+    count_value_pattern: Optional[str] = None,
+):
+    counts = defaultdict(int)
+
+    def key_match(k):
+        return fnmatch(k, count_key_pattern) if count_key_pattern else True
+
+    def val_match(v):
+        return fnmatch(str(v), count_value_pattern) if count_value_pattern else True
+
+    def matches_pattern(node):
+        """
+        Matching rules:
+        - No patterns → always match
+        - Only key pattern → any key matches
+        - Only value pattern → any value matches
+        - Both → SAME key/value pair must match
+        """
+        if not isinstance(node, dict):
+            return False
+
+        if not count_key_pattern and not count_value_pattern:
+            return True
+
+        for k, v in node.items():
+            k_ok = key_match(k)
+            v_ok = val_match(v)
+
+            if count_key_pattern and count_value_pattern:
+                if k_ok and v_ok:
+                    return True
+            elif count_key_pattern:
+                if k_ok:
+                    return True
+            elif count_value_pattern:
+                if v_ok:
+                    return True
+
+        return False
+
+    def walk(node, context):
+        new_context = context.copy()
+
+        if isinstance(node, dict):
+            # inherit context
+            for k in key_order:
+                if k in node:
+                    new_context[k] = node[k]
+
+            node_type = node.get("Type", "")
+
+            if isinstance(node_type, str) and node_type.startswith("Job"):
+                if matches_pattern(node):
+                    values = []
+                    for k in key_order:
+                        values.append(new_context.get(k))
+                        if all(values):
+                            counts[tuple(values)] += 1
+
+            # recurse generically
+            for v in node.values():
+                walk(v, new_context)
+
+        elif isinstance(node, list):
+            for item in node:
+                walk(item, context)
+
+    walk(data, {})
+
+    # Normalize output (all keys always present)
+    result = []
+    for combo, count in counts.items():
+        entry = {
+            key: combo[i] if i < len(combo) else ""
+            for i, key in enumerate(key_order)
+        }
+        entry["count"] = count
+        result.append(entry)
+
+    return result
+
+# def count_job_combinations(data, key_order, count_key_pattern: Optional[str] = None, count_value_pattern: Optional[str] = None):
+#     counts = defaultdict(int)
+
+#     def walk(node, context):
+#         # Copy inherited context
+#         new_context = context.copy()
+
+#         if isinstance(node, dict):
+#             # Update context if keys exist in this node
+#             for k in key_order:
+#                 if k in node:
+#                     new_context[k] = node[k]
+
+#             # Detect a job node
+#             node_type = node.get("Type", "")
+#             if isinstance(node_type, str) and node_type.startswith("Job"):
+#                 values = []
+#                 for k in key_order:
+#                     values.append(new_context.get(k))
+
+#                     # Only count complete prefixes (no None)
+#                     if all(values):
+#                         counts[tuple(values)] += 1
+
+#             # Recurse into ALL values (generic traversal)
+#             for value in node.values():
+#                 walk(value, new_context)
+
+#         elif isinstance(node, list):
+#             for item in node:
+#                 walk(item, context)
+
+#     # Start recursion
+#     walk(data, {})
+
+#     # Format output
+    
+#     result = []
+#     for combo, count in counts.items():
+#         entry = {}
+
+#         for i, key in enumerate(key_order):
+#             entry[key] = combo[i] if i < len(combo) else ""
+
+#         entry["count"] = count
+
+#         result.append(entry)
+
+#     return result
+
+#################################################################################
 
 def count_job_types(obj, type_counts, debug=False):
     """
