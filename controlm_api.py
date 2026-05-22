@@ -123,6 +123,15 @@ class ControlMApi:
         """Return the Control-M Servers configuration definition."""
         print(f"Getting configuration definition for server {server}...")
         return self._get(f"/config/server/{server}/definition")
+    
+    def config_server_params(self, server: Optional[str] = None):
+        """Return the Control-M Servers configuration definition."""
+        print(f"Getting configuration definition for server {server}...")
+        if server:
+            endpoint = f"?server={server}"
+        else:
+            endpoint = ""
+        return self._get(f"/config/systemsettings/server{endpoint}")
 
     ## ---- Config - Agents ----
     def config_agents(self, server: str):
@@ -152,6 +161,13 @@ class ControlMApi:
     def config_runasusers(self, server: str):
         """Return the Control-M Runasusers for the specified server."""
         print(f"Getting Control-M Runasusers for server {server}...")
+        return self._get(f"/config/server/{server}/runasusers")
+
+
+## ---- Config - Users and Roles ----
+    def config_users(self, server: str):
+        """Return the Control-M EM Users."""
+        print(f"Getting Control-M EM Users...")
         return self._get(f"/config/server/{server}/runasusers")
 
 

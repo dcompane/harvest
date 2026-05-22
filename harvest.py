@@ -32,6 +32,7 @@ No bulk download of all jobs. All job inspection is folder-scoped.
 
 from __future__ import annotations
 
+from csv import excel
 import os
 import sys
 from datetime import datetime
@@ -166,10 +167,10 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None):
 
     #Set Debug mode in Utility module
     Utility.debug=args.debug
-
-    print_debug(f"Debug is {args.debug}", Utility.debug)
+    print_debug(f"Default debug is {args.debug}", True)
 
     includes = Utility.parse_include(args.include)
+    print_debug(f"Current debug is {args.debug}", True)
 
     client = ControlMApi(args.base_url, Auth(api_key=args.api_key), args.timeout)
     excel = ExcelWorkbookWriter()
@@ -180,10 +181,10 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None):
 
     # Control-M Servers are always included
     servers = client.config_servers()
-    server_names = [
-        s["name"] for s in servers if isinstance(s, dict)
-        #s["name"] for s in servers if isinstance(s, dict) and s.get("state") == "Up" 
-    ]
+    # server_names = [
+    #     s["name"] for s in servers if isinstance(s, dict)
+    #     #s["name"] for s in servers if isinstance(s, dict) and s.get("state") == "Up" 
+    # ]
 
     rows = None
     for server in servers:
@@ -204,11 +205,28 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None):
             description="List of Control-M Servers with details such as type, version, and status",
             direction="horizontal" )
 
-    
-
+    all_parms = []
+    columns = ["Parameter"]
     for server in srvs_up:
-        print_debug(f"Server definition for {server}: {svr_def}", Utility.debug)
-        #ctmsettings = client.config_systemsettings()
+        print_debug(f"Server parameters for {server}: {svr_def}", Utility.debug)
+        svr_def = client.config_server_params(server=server)
+
+
+        parm_toadd = []
+        columns.append(f"{server}")
+        for item in svr_def:
+            parm_toadd = {}
+            parm_toadd[item["name"]] = item["value"]
+            parm_toadd[f"{server}"] = item["value"]
+            parm_toadd["Default Value"] = item["defaultValue"]
+
+            all_parms.append(parm_toadd)
+
+        columns.append("Default Value")
+        excel.add_table("Config Servers", all_parms, table_title="Config Server Parameterss", 
+            description=f"List of Control-M Server Parameters for server {server}",
+            direction="horizontal", columns=columns)
+    
 
     all_jobs={"Folders":[]}
     for srv in srvs_up or []:

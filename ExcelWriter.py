@@ -70,7 +70,7 @@ class ExcelWorkbookWriter:
             ws.append([""])  # Add an empty row for spacing after title/description
             start_row = ws.max_row + 1  # Update start_row after adding title/description
 
-        headers, rows = self._normalize_data(data,direction=direction)
+        headers, rows = self._normalize_data(data,direction=direction, columns=columns)
 
         if columns:
             for i in range(max(len(headers), len(columns))):
@@ -129,14 +129,17 @@ class ExcelWorkbookWriter:
             return {k: self._remove_newlines(v) for k, v in obj.items()}
         return obj  # Leave other types unchanged
 
-    def _normalize_data(self, data: Any, direction: str = "horizontal"):
+    def _normalize_data(self, data: Any, direction: str = "horizontal", columns: Optional[list] = None):
         """Normalize input data into headers + rows."""
 
         # Remove New Lines from all string values in the data structure
         data = self._remove_newlines(data)
 
         if isinstance(data, list) and data and isinstance(data[0], dict):
-            headers = list(data[0].keys())
+            if columns:
+                headers = columns
+            else:
+                headers = list(data[0].keys())
             for i in range(1, len(data)):
                 for h in  list(data[i].keys()):
                     if h not in headers:
@@ -153,8 +156,8 @@ class ExcelWorkbookWriter:
             rows = [v for k, v in data.items()]
 
         elif isinstance(data, dict) and direction == "vertical":
-            headers = ["Key", "Value"]
-            rows = [[k, self._v(v)] for k, v in data.items()]
+                headers = ["Key", "Value"]
+                rows = [[k, self._v(v)] for k, v in data.items()]
 
         else:
             headers = ["Value"]
