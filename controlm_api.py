@@ -30,12 +30,11 @@ class ControlMApi:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.session = requests.Session()
-        # self.session.headers["Accept"] = "application/json"
-        self.session.headers["Accept"] = "*/*"
+        self.session.headers["accept"] = "*/*"
         self.session.headers["x-api-key"] = auth.api_key
 
     def _get(self, path: str, params: Optional[Dict[str, Any]] = None, 
-             headers: Optional[Dict[str, Any]] = None) -> Any:
+             headers: Optional[Dict[str, Any]] = None, action: Optional[str] = "GET", data=None) -> Any:
         """Internal method to perform a GET request to the Control-M API."""
         path = path if path.startswith("/") else "/" + path
         url = f"{self.base_url}{path}"
@@ -46,26 +45,40 @@ class ControlMApi:
         merged_headers = dict(self.session.headers)
         merged_headers.update(request_headers)  # overwrite duplicates
 
-        # print_debug(f"URL: {url}", Utility.debug)
+        print_debug(f"URL: {url}", Utility.debug)
 
-        # print_debug(f"Session headers: {self.session.headers}", Utility.debug)
-        # print_debug(f"Request headers: {request_headers}", Utility.debug)
-        # print_debug(f"Effective headers: {merged_headers}", Utility.debug)
+        print_debug(f"Session headers: {self.session.headers}", Utility.debug)
+        print_debug(f"Request headers: {request_headers}", Utility.debug)
+        print_debug(f"Effective headers: {merged_headers}", Utility.debug)
 
-        # print_debug(f"Query: {query}", Utility.debug)
+        print_debug(f"Query: {query}", Utility.debug)
 
-        r = self.session.get(
-            url,
-            params=query,
-            headers=merged_headers,
-            timeout=self.timeout,
-            verify=False,
-        )
+        if action.upper() == "GET":
+            r = self.session.get(
+                url,
+                params=query,
+                headers=merged_headers,
+                timeout=self.timeout,
+                verify=False,
+            )
+        elif action.upper() == "POST":
+            r = self.session.post(
+                url,
+                json=data if data else {},
+                params=query,
+                headers=merged_headers,
+                timeout=self.timeout,
+                verify=False,
+            )
 
         try:
-            return r.json()
+            resp = r.json()
         except ValueError:
-            return r.text
+            resp = r.text
+
+        print_debug(f"Response: {resp}", Utility.debug)
+
+        return resp
 
     # ---- Status / Metadata ----
     def get_status(self):
@@ -164,12 +177,27 @@ class ControlMApi:
         return self._get(f"/config/server/{server}/runasusers")
 
 
-## ---- Config - Users and Roles ----
+    ## ---- Config - Users and Roles ----
     def config_users(self, server: str):
         """Return the Control-M EM Users."""
         print(f"Getting Control-M EM Users...")
         return self._get(f"/config/server/{server}/runasusers")
+    
+    ## ---- Config - EM DB Details ----
+    def config_emdb_details(self):
+        """Return the Control-M EM DB Details."""
+        print(f"Getting Control-M EM DB Details...")
+        return self._get("/config/em/db/details")
 
+    ## ---- Config - EM DB Space ----
+    def config_emdb_space(self):
+        """Return the Control-M EM DB Space."""
+        print(f"Getting Control-M EM DB Space...")
+        response = self._get("/config/em/db/space", 
+            headers={"accept": "application/json", "Content-Type": "application/json"},
+            data={},
+            action="POST")
+        return response
 
     ##############################################################################
 
@@ -224,6 +252,10 @@ class ControlMApi:
         """Return the Control-M Jobs for the specified server and folder."""
         return self._get(f"/deploy/jobs?server={server}&folder={folder}&useArrayFormat=True")
 
+    ## ---- Deploy - Calendars ----
+    def deploy_calendars(self, server: Optional[str] = "*"):
+        """Return the Control-M Calendars for the specified server."""
+        return self._get(f"/deploy/calendars")
     
 # =============================================================================
 # Main

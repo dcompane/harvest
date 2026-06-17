@@ -32,7 +32,7 @@ No bulk download of all jobs. All job inspection is folder-scoped.
 
 from __future__ import annotations
 
-from csv import excel
+# from csv import excel
 import os
 import sys
 from datetime import datetime
@@ -55,11 +55,14 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # Scalable Deploy Summaries
 # =============================================================================
 
-def collect_folder_job_counts(folder: dict):
-    """Calculate job counts for each folder."""
+def collect_folder_job_counts(folder: dict, folder_only: bool = False):
+    """
+    Calculate job counts for each folder.
+    """
 
+    # Loop is to get the objects we need. there is always one folder in the items.
     for _, folder_obj in folder.items():
-        # print_debug (folder_obj, Utility.debug)
+        print_debug (folder_obj, Utility.debug)
         job_count, jd = Utility.count_key_value_matches([folder_obj], "Type", "Job:*")
         sub_count, sd = Utility.count_key_value_matches([folder_obj], "Type", "SubFolder*")
         print_debug(f"JobCount:{job_count}, SubCount:{sub_count}", Utility.debug)
@@ -69,7 +72,6 @@ def collect_folder_job_counts(folder: dict):
     print_debug(f"Name: {folder_obj[0]['Name']}", Utility.debug)
     print_debug(f"JobCount:{job_count}, SubCount:{sub_count}", Utility.debug)
     print_debug(f"JobDepth:{job_depth}, SubDepth:{sub_depth}", Utility.debug)
-    
 
     return job_count, job_depth, sub_count, sub_depth
 
@@ -162,6 +164,8 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None):
             help="(Optional) Control-M Server name to target (can specify multiple times)")
     parser.add_argument("--debug",  default=False, 
             help="Enable debug mode")
+    parser.add_argument("--folderlimit",  default=10, 
+            help="Limit the number of folders to include in the inventory (for testing with large environments)")
 
     args = parser.parse_args(list(argv) if argv else None)
 
@@ -206,27 +210,18 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None):
             direction="horizontal" )
 
     all_parms = []
-    columns = ["Parameter"]
     for server in srvs_up:
         print_debug(f"Server parameters for {server}: {svr_def}", Utility.debug)
         svr_def = client.config_server_params(server=server)
 
 
-        parm_toadd = []
-        columns.append(f"{server}")
+
         for item in svr_def:
-            parm_toadd = {}
-            parm_toadd[item["name"]] = item["value"]
-            parm_toadd[f"{server}"] = item["value"]
-            parm_toadd["Default Value"] = item["defaultValue"]
+            item.update({"server": server})
 
-            all_parms.append(parm_toadd)
-
-        columns.append("Default Value")
-        excel.add_table("Config Servers", all_parms, table_title="Config Server Parameterss", 
+        excel.add_table("Config Servers", svr_def, table_title="Config Server Parameters",
             description=f"List of Control-M Server Parameters for server {server}",
-            direction="horizontal", columns=columns)
-    
+            direction="horizontal", columns=None)
 
     all_jobs={"Folders":[]}
     for srv in srvs_up or []:
@@ -285,7 +280,7 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None):
 
         tokens = client.auth_tokens()["tokens"]
         # excel.add_sheet(f"Tokens Info")
-        excel.add_table(f"Tokens Info", tokens, table_title="Tokens Info ", description="List of active authentication tokens with details such as user, creation time, and expiration time", direction="horizontal" )
+        excel.add_table("Tokens Info", tokens, table_title="Tokens Info ", description="List of active authentication tokens with details such as user, creation time, and expiration time", direction="horizontal" )
 
 # ---- Config ----
     if "config" in includes:
@@ -466,31 +461,41 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None):
 
     # ---- Deploy ----
     if "deploy" in includes:
+
+        # ---- Deploy - App-SubApps ----
         print_debug("Collecting App-SubApp data...", Utility.debug)
         apps = Utility.count_job_combinations(all_jobs, ["ControlmServer", "Application", "SubApplication"])
-        # apps_unique = []
-        # seen = set()
-        # for d in apps:
-        #     # Convert dictionary to a frozenset of sorted items for hashability
-        #     try:
-        #         dict_key = frozenset(d.items())
-        #     except AttributeError:
-        #         raise ValueError("All elements must be dictionaries.")
-
-        #     if dict_key not in seen:
-        #         seen.add(dict_key)
-        #         apps_unique.append(d)
-
 
         excel.add_table("App-SubApps", apps, table_title="AppSubApps",
             description="List of all jobs in the deployment with details such as folder, server, and job type")
+        
+        # ---- Deploy - Calendars ----
+        print_debug("Collecting Calendar data...", Utility.debug)
+        calendars = client.deploy_calendars()
+
+        all_calendars = []
+        for name, calendar in calendars.items():
+            calendar_toadd = {}
+            calendar["server"] = calendar.get("Server", "*")
+            calendar_toadd["name"] = name
+            calendar_toadd["Type"] = calendar["Type"].split(":")[1] if "Type" in calendar.keys() else None
+            calendar_toadd["Alias"] = calendar.get("Alias", "N/A")
+            calendar_toadd["Description"] = calendar.get("Description", "")
+            calendar_toadd["When"] = ""
+            if calendar_toadd["Type"] == "Regular":
+                calendar_toadd["When"] = Utility.get_values_for_key(calendar["When"]["Years"], "Year")
+            
+            all_calendars.append(calendar_toadd)
+
+        excel.add_table("Calendars", all_calendars, table_title="Calendars",
+            description="List of all calendars")
 
 
-
+    # It's a wrap!
     current_dir_os = os.getcwd()
     excel.save(args.output)
     print(f"\n✅ Inventory workbook created in {current_dir_os}{os.path.sep}{args.output}")
-    # open_excel_worksheet(f"{current_dir_os}{os.path.sep}{args.output}")
+
 
 # =============================================================================
 # Main

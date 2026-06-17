@@ -1,8 +1,8 @@
 # ~~GET/authentication/token/~~
 
-# *GET/authentication/tokens*
+# *~~GET/authentication/tokens~~*
 
-# GET/config/archive/rules
+# ~~GET/config/archive/rules~~
 
 # GET/config/archive/statistics
 

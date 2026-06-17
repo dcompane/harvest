@@ -199,56 +199,6 @@ def count_job_combinations(
 
     return result
 
-# def count_job_combinations(data, key_order, count_key_pattern: Optional[str] = None, count_value_pattern: Optional[str] = None):
-#     counts = defaultdict(int)
-
-#     def walk(node, context):
-#         # Copy inherited context
-#         new_context = context.copy()
-
-#         if isinstance(node, dict):
-#             # Update context if keys exist in this node
-#             for k in key_order:
-#                 if k in node:
-#                     new_context[k] = node[k]
-
-#             # Detect a job node
-#             node_type = node.get("Type", "")
-#             if isinstance(node_type, str) and node_type.startswith("Job"):
-#                 values = []
-#                 for k in key_order:
-#                     values.append(new_context.get(k))
-
-#                     # Only count complete prefixes (no None)
-#                     if all(values):
-#                         counts[tuple(values)] += 1
-
-#             # Recurse into ALL values (generic traversal)
-#             for value in node.values():
-#                 walk(value, new_context)
-
-#         elif isinstance(node, list):
-#             for item in node:
-#                 walk(item, context)
-
-#     # Start recursion
-#     walk(data, {})
-
-#     # Format output
-    
-#     result = []
-#     for combo, count in counts.items():
-#         entry = {}
-
-#         for i, key in enumerate(key_order):
-#             entry[key] = combo[i] if i < len(combo) else ""
-
-#         entry["count"] = count
-
-#         result.append(entry)
-
-#     return result
-
 #################################################################################
 
 def count_job_types(obj, type_counts, debug=False):
@@ -323,6 +273,25 @@ def count_dicts_with_key_value(dict_list, target_key, target_value):
             count += 1
     return count
 
+
+def get_values_for_key(data, key, include_none=False):
+    """
+    Extracts values for a given key from a list of dictionaries.
+
+    :param data: List containing dictionaries (and possibly other types)
+    :param key: Key to search for in each dictionary
+    :return: List of values
+    """
+    if not isinstance(data, list):
+        raise TypeError("Data must be a list.")
+
+    values = []
+    for item in data:
+        if isinstance(item, dict):
+            if key in item:
+                values.append(item[key])
+
+    return values
 
 
 

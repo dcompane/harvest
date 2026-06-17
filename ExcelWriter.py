@@ -35,7 +35,7 @@ class ExcelWorkbookWriter:
         start_col: Optional[int] = 1,
         as_table: bool = True,
         table_name: Optional[str] = None,
-        direction: str = "horizontal",
+        direction: Optional[str] = "horizontal",
         gap_rows: int =2,
         table_title: str = None,
         description: str = None,
@@ -221,113 +221,6 @@ class ExcelWorkbookWriter:
             else:
                 converted.append(value)
         return converted
-
-
-
-
-win32com = None
-
-# ---------------------------------------------------------
-# 1. Check if OS is Windows
-# ---------------------------------------------------------
-def is_windows() -> bool:
-    """Return True if the OS is Windows."""
-    pfrm =  platform.system().lower() == "windows" 
-    if pfrm:
-        # Only import COM libraries if actually needed later
-        try:
-            import win32com.client
-        except ImportError:
-            pass
-    return pfrm
-
-# ---------------------------------------------------------
-# 2. Check if Excel is available (COM automation)
-# ---------------------------------------------------------
-def is_excel_available() -> bool:
-    """
-    Check if Microsoft Excel is available via COM.
-
-    Returns:
-        True if Excel can be launched, False otherwise.
-    """
-    if not is_windows() or win32com is None:
-        return False
-
-    try:
-        excel = win32com.client.Dispatch("Excel.Application")
-        excel.Quit()
-        return True
-    except Exception:
-        return False
-
-
-# ---------------------------------------------------------
-# 3. Check if file exists
-# ---------------------------------------------------------
-def file_exists(file_path: str) -> bool:
-    """Return True if the file exists."""
-    return os.path.isfile(file_path)
-
-
-# ---------------------------------------------------------
-# 4. Open Excel workbook and worksheet
-# ---------------------------------------------------------
-def open_excel_worksheet(
-    file_path: str,
-    sheet_name: Optional[str] = None,
-    visible: bool = True
-):
-    """
-    Open an Excel file and optionally select a worksheet.
-
-    Args:
-        file_path: Path to Excel file
-        sheet_name: Optional sheet name (default = first sheet)
-        visible: Whether Excel UI should be visible
-
-    Returns:
-        (excel_app, workbook, worksheet)
-
-    Raises:
-        RuntimeError if any requirement is not met.
-    """
-
-    # --- Environment validation ---
-    if not is_windows():
-        raise RuntimeError("Excel automation requires Windows OS.")
-
-    if not is_excel_available():
-        raise RuntimeError("Microsoft Excel is not available.")
-
-    if not file_exists(file_path):
-        raise RuntimeError(f"File does not exist: {file_path}")
-
-    # --- Open Excel ---
-    excel = win32com.client.Dispatch("Excel.Application")
-    excel.Visible = visible
-
-    workbook = excel.Workbooks.Open(file_path)
-
-    # Select worksheet
-    if sheet_name:
-        worksheet = workbook.Worksheets(sheet_name)
-    else:
-        worksheet = workbook.Worksheets(1)
-
-    return excel, workbook, worksheet
-
-
-# ---------------------------------------------------------
-# 5. Cleanup helper (recommended)
-# ---------------------------------------------------------
-def close_excel(excel, workbook, save: bool = False):
-    """Safely close workbook and Excel instance."""
-    if workbook:
-        workbook.Close(SaveChanges=save)
-    if excel:
-        excel.Quit()
-
 
 # =============================================================================
 # Main
