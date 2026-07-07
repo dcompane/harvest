@@ -474,21 +474,38 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None):
         calendars = client.deploy_calendars()
 
         all_calendars = []
-        for name, calendar in calendars.items():
-            calendar_toadd = {}
-            calendar["server"] = calendar.get("Server", "*")
-            calendar_toadd["name"] = name
-            calendar_toadd["Type"] = calendar["Type"].split(":")[1] if "Type" in calendar.keys() else None
-            calendar_toadd["Alias"] = calendar.get("Alias", "N/A")
-            calendar_toadd["Description"] = calendar.get("Description", "")
-            calendar_toadd["When"] = ""
-            if calendar_toadd["Type"] == "Regular":
-                calendar_toadd["When"] = Utility.get_values_for_key(calendar["When"]["Years"], "Year")
-            
-            all_calendars.append(calendar_toadd)
+
+        if "message" in calendars:
+            message = calendars.get("message", "")
+            for calendar in calendars["calendars"]:
+                calendar_toadd = {}
+                calendar["server"] = calendar.get("Server", "*")
+                calendar_toadd["name"] = calendar.get("Name", "Undefined")
+                calendar_toadd["Type"] = calendar["Type"].split(":")[1] if "Type" in calendar.keys() else None
+                calendar_toadd["Alias"] = calendar.get("Alias", "N/A")
+                calendar_toadd["Description"] = calendar.get("Description", "")
+                calendar_toadd["When"] = ""
+                if calendar_toadd["Type"] == "Regular":
+                    calendar_toadd["When"] = Utility.get_values_for_key(calendar["When"]["Years"], "Year")
+                all_calendars.append(calendar_toadd)
+        else:
+            for name, calendar in calendars.items():
+                calendar_toadd = {}
+                calendar["server"] = calendar.get("Server", "*")
+                calendar_toadd["name"] = name
+                calendar_toadd["Type"] = calendar["Type"].split(":")[1] \
+                        if "Type" in calendar.keys() else None
+                calendar_toadd["Alias"] = calendar.get("Alias", "N/A")
+                calendar_toadd["Description"] = calendar.get("Description", "")
+                calendar_toadd["When"] = ""
+                if calendar_toadd["Type"] == "Regular":
+                    calendar_toadd["When"] = Utility. \
+                    get_values_for_key(calendar["When"]["Years"], "Year")
+
+                all_calendars.append(calendar_toadd)
 
         excel.add_table("Calendars", all_calendars, table_title="Calendars",
-            description="List of all calendars")
+            description=f"List of all calendars. {message}")
 
 
     # It's a wrap!

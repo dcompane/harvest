@@ -66,7 +66,15 @@
             "args": ["--include", "deploy,config,auth,provision", "--debug", "True", "--base-url", "https://dc01:8444/automation-api", "--api-key", "b25QcmVtOjMxMmY2NWZmLTI1MTEtNDY4ZC04NzdmLThmZTVlMjk2NDcwNQ=="],
             "justMyCode": false
         },
-
+        {
+            "name": "SaaS Prod",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": ["--include", "deploy,config,auth,provision", "--debug", "False", "--base-url", "https://se-prod-aapi.us1.controlm.com/automation-api", "--api-key", "UFJER0ZQOmE1Nzk4YzkwLTNlOTAtNGU4MS05NWVjLTRkZTIzZmE4YjhhMDpSTk5TdFRjQ3Yxa2cvY0w1ZzZRYnJXZlp3cEMzbGh3bm9qQlZvd3luakt3PQ=="],
+            "justMyCode": false
+        },
         {
             "name": "Python: with parms no job",
             "type": "debugpy",
