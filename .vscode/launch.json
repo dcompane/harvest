@@ -63,8 +63,17 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["--include", "deploy,config,auth,provision", "--debug", "True", "--base-url", "https://dc01:8444/automation-api", "--api-key", "b25QcmVtOjMxMmY2NWZmLTI1MTEtNDY4ZC04NzdmLThmZTVlMjk2NDcwNQ=="],
-            "justMyCode": false
+            "args": ["--include", "deploy,config,auth,provision", "--debug", "False", "--base-url", "https://dc01:8444/automation-api", "--api-key", "b25QcmVtOjMxMmY2NWZmLTI1MTEtNDY4ZC04NzdmLThmZTVlMjk2NDcwNQ=="],
+            "justMyCode": true
+        },
+        {
+            "name": "Deploy On-Prem no key",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": ["--include", "deploy,config,auth,provision", "--base-url", "https://dc01:8444/automation-api"],
+            "justMyCode": true
         },
         {
             "name": "SaaS Prod",

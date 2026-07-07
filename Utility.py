@@ -4,8 +4,10 @@ from fnmatch import fnmatch
 from typing import Any, Dict, Optional, Iterable, Tuple, List
 
 
+
 debug = False
 isSaaS = False
+harvest_version = "1.0.0"
 
 # =============================================================================
 # Utility
@@ -20,9 +22,12 @@ def parse_include(val: str):
         raise ValueError(f"Invalid --include value(s): {','.join(unknown)}")
     return parts or allowed
 
-def print_debug(string: str, debug):
+def str_to_bool(value: str) -> bool:
+    return value.strip().lower() == "true"
+
+def print_debug(string: str, de_bug: bool = debug):
     """Print debug information if debug mode is enabled."""
-    if debug:
+    if de_bug:
         print(string)
 
 

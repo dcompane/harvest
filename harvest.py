@@ -38,6 +38,7 @@ import sys
 from datetime import datetime
 from typing import Optional, Iterable
 import argparse
+import getpass
 from urllib.parse import urlparse
 
 import urllib3
@@ -149,7 +150,7 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None):
     parser.add_argument("--base-url", required=True, 
             help="Base URL of the Control-M Automation API"+
                 " (e.g. https://aapi.example.com:8443/automation-api)")
-    parser.add_argument("--api-key", required=True, 
+    parser.add_argument("--api-key", required=False, 
             help="Control-M Automation API key with appropriate permissions")
     parser.add_argument("--include", default="deploy,config,auth", 
             help="Comma-separated list of datasets to include (deploy, config, auth)")
@@ -157,27 +158,36 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None):
             help="(Optional) z/OS library name to filter deploy data for z/OS environments")
     parser.add_argument("--timeout", type=int, default=60, 
             help="HTTP request timeout in seconds")
-    parser.add_argument("--output", default="controlm_inventory_"+
-                f"{datetime.now():%Y%m%d_%H%M%S}.xlsx",
+    parser.add_argument("--output", default="controlm_inventory",
             help="Output Excel file name")
     parser.add_argument("--server", action="append", default=None, 
             help="(Optional) Control-M Server name to target (can specify multiple times)")
     parser.add_argument("--debug",  default=False, 
             help="Enable debug mode")
     parser.add_argument("--folderlimit",  default=10, 
-            help="Limit the number of folders to include in the inventory (for testing with large environments)")
+            help="Limit the number of folders to include in the inventory (for testing with large environments) NOT IMPLEMENTED")
 
     args = parser.parse_args(list(argv) if argv else None)
 
     #Set Debug mode in Utility module
-    Utility.debug=args.debug
+    Utility.debug= Utility.str_to_bool(str(args.debug))
     print_debug(f"Default debug is {args.debug}", True)
+
+    if not args.api_key:
+        args.api_key = getpass.getpass(prompt="Enter Control-M API key: ", echo_char="*")
+        if bool(args.api_key) == False:
+            print("Error: API key is required.")
+            sys.exit(42)
 
     includes = Utility.parse_include(args.include)
     print_debug(f"Current debug is {args.debug}", True)
+    args.output = args.output + f"_{datetime.now():%Y%m%d_%H%M%S}.xlsx"
+    print(f"File {args.output} will be written to {os.getcwd()}")
 
     client = ControlMApi(args.base_url, Auth(api_key=args.api_key), args.timeout)
     excel = ExcelWorkbookWriter()
+
+    client.initial_test()
 
     # Metadata is always included
     # excel.add_sheet("Metadata")
@@ -479,16 +489,17 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None):
             message = calendars.get("message", "")
             for calendar in calendars["calendars"]:
                 calendar_toadd = {}
-                calendar["server"] = calendar.get("Server", "*")
+                calendar_toadd["server"] = calendar.get("Server", "*")
                 calendar_toadd["name"] = calendar.get("Name", "Undefined")
                 calendar_toadd["Type"] = calendar["Type"].split(":")[1] if "Type" in calendar.keys() else None
                 calendar_toadd["Alias"] = calendar.get("Alias", "N/A")
                 calendar_toadd["Description"] = calendar.get("Description", "")
                 calendar_toadd["When"] = ""
                 if calendar_toadd["Type"] == "Regular":
-                    calendar_toadd["When"] = Utility.get_values_for_key(calendar["When"]["Years"], "Year")
+                    calendar_toadd["When"] = Utility.get_values_for_key(calendar["When"]["Years"], "Year") if "When" in calendar.keys() else "No information available"
                 all_calendars.append(calendar_toadd)
         else:
+            message = ""
             for name, calendar in calendars.items():
                 calendar_toadd = {}
                 calendar["server"] = calendar.get("Server", "*")
@@ -518,4 +529,6 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None):
 # Main
 # =============================================================================
 if __name__ == "__main__":
+    print("Starting Control-M Inventory...")
+    print(f"harvest version: {Utility.harvest_version}")
     sys.exit(main(debug=Utility.debug)) 

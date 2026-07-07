@@ -2,9 +2,11 @@
 Control-M Automation API client for harvesting metadata.
 """
 
+import sys
 from typing import Any, Dict, Optional
 from dataclasses import dataclass
 import json
+from xml.parsers.expat import errors
 from xmlrpc import server
 import Utility
 from Utility import print_debug
@@ -32,6 +34,7 @@ class ControlMApi:
         self.session = requests.Session()
         self.session.headers["accept"] = "*/*"
         self.session.headers["x-api-key"] = auth.api_key
+       
 
     def _get(self, path: str, params: Optional[Dict[str, Any]] = None, 
              headers: Optional[Dict[str, Any]] = None, action: Optional[str] = "GET", data=None) -> Any:
@@ -81,6 +84,19 @@ class ControlMApi:
         return resp
 
     # ---- Status / Metadata ----
+    def initial_test(self):
+        """Return the Control-M Automation API status metadata."""
+        print ("Getting initial test...")
+        try:
+            test = self._get("/config/servers")  # Test connection
+        except requests.exceptions.RequestException as e:
+            print(f"Error connecting to Control-M API: {e}. Verify the URL or API key.")
+            sys.exit(24)
+        if isinstance(test, dict): 
+            if "errors" in test.keys():
+                print(f"Error connecting to Control-M API: {test['errors']}. Verify the API key.")
+                sys.exit(25)
+
     def get_status(self):
         """Return the Control-M Automation API status metadata."""
         print ("Getting status...")
@@ -192,7 +208,7 @@ class ControlMApi:
     ## ---- Config - EM DB Space ----
     def config_emdb_space(self):
         """Return the Control-M EM DB Space."""
-        print(f"Getting Control-M EM DB Space...")
+        print("Getting Control-M EM DB Space...")
         response = self._get("/config/em/db/space", 
             headers={"accept": "application/json", "Content-Type": "application/json"},
             data={},
@@ -226,6 +242,7 @@ class ControlMApi:
         """
         Return the Client developed jobtypes available to the EM
         """
+        print ("Getting job types...")
         return self._get("/deploy/ai/jobtypes")
 
     ## ---- Deploy - Folders ----
@@ -234,27 +251,23 @@ class ControlMApi:
         Return the folders on the specific Control-M Server, 
           optionally filtered by folder name and z/OS library.
         """
-        return self._get(f"/deploy/folders?server={server}&folder={folder}")
-
-
-
-    # ---- Deploy ----
-    ## ---- Deploy - Folders ----
-    def deploy_folders(self, server: str, folder: Optional[str] = "*"):
-        """
-        Return the folders on the specific Control-M Server, 
-          optionally filtered by folder name and z/OS library.
-        """
+        print(f"Getting folder {folder} for server {server}...")
         return self._get(f"/deploy/folders?server={server}&folder={folder}")
 
     ## ---- Deploy - Jobs ----
     def deploy_jobs(self, server: str, folder: Optional[str] = "*"):
-        """Return the Control-M Jobs for the specified server and folder."""
+        """
+        Return the Control-M Jobs for the specified server and folder.
+        """
+        print(f"Getting jobs for folder {folder} on server {server}...")
         return self._get(f"/deploy/jobs?server={server}&folder={folder}&useArrayFormat=True")
 
     ## ---- Deploy - Calendars ----
     def deploy_calendars(self, server: Optional[str] = "*"):
-        """Return the Control-M Calendars for the specified server."""
+        """
+        Return the Control-M Calendars for the specified server.
+        """
+        print(f"Getting calendars for server {server}...")
         return self._get(f"/deploy/calendars")
     
 # =============================================================================
