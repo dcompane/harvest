@@ -1,6 +1,0 @@
-{
-    "pylint.args": [
-        "--max-branches=5"
-    ],
-    "git.enableCommitSigning": true
-}
