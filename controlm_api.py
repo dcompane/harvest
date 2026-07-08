@@ -108,7 +108,7 @@ class ControlMApi:
         return self._get("/build_time.txt")
 
     # ---- Build ----
-    def build(  self, data: Dict[str, Any]):
+    def build(self, data: Dict[str, Any]):
         """Return the authentication tokens."""
         print ("Getting authentication tokens...")
         return self._get("/build", params=data)
