@@ -1,22 +1,50 @@
-
-# harvest
+**harvest**
 
 Harvest Control-M Data using the AAPI
 
-User: generate user instructions to run harvest.py from command line with parameter documentation
+# Step 1: Obtain an admin AAPI token
 
-GitHub Copilot: Optimized tool selectionChecking the command-line options in harvest.py and any existing README docs so I can provide accurate usage instructions.
+* Download the [harvest.zip](https://github.com/dcompane/harvest/blob/main/dist/harvest.zip) file to expand harvest.ex
 
-Read [](file:///c%3A/Users/dcompane/OneDrive/git_repos/harvest/harvest.py#1-1), lines 1 to 220
+# Step 2: Run the harvest package
 
-Read [](file:///c%3A/Users/dcompane/OneDrive/git_repos/harvest/README.md)
+## Run harvest.exe from the Windows command line
 
-## Run harvest.py from the command line
-
-From the `harvest` repository root:
+### Download the [harvest.zip](https://github.com/dcompane/harvest/blob/main/dist/harvest.zip) file to expand harvest.exe
 
 ```bash
-python harvest.py --base-url https://<aapi-host>:8443/automation-api --api-key "<your-api-key>"
+tar -zxvf  harvest.zip
+```
+
+harvest.exe is expanded
+
+### Run in a cmd window
+
+```Shell
+harvest.exe --base-url https://<aapi-host>:8443/automation-api [--api-key "<your-api-key>"]
+```
+
+---
+
+## Run harvest.py from the command line on Linux and Windows
+
+### Pre-requisite packages
+
+You need to have python and know how to use it in your environment. In addition, you will need additional packages
+
+* requests
+* urllib3
+* openpyx
+* Install them by running
+
+```bash
+pip install requests urllib3 openpyxl
+```
+
+### From the `harvest` repository root:
+
+```bash
+python harvest.py --base-url https://<aapi-host>:8443/automation-api [--api-key "<your-api-key>"]
 ```
 
 ---
@@ -78,9 +106,7 @@ python harvest.py --base-url https://<aapi-host>:8443/automation-api --api-key "
 python harvest.py \
   --base-url https://dc01:8444/automation-api \
   --api-key "b25QcmVtOjMxMmY2NWZmLTI1MTEtNDY4ZC04NzdmLThmZTVlMjk2NDcwNQ==" \
-  --include deploy,config \
-  --output controlm_inventory \
-  --debug True
+  --output controlm_inventory 
 ```
 
 This writes an Excel workbook to the current working directory, for example:
@@ -95,7 +121,7 @@ controlm_inventory_20260707_123456.xlsx
 
 - `Metadata` and `Config Servers` are always included.
 - The tool uses current working directory for output.
-- `--folderlimit` is defined but not actually implemented in harvest.py
+- `--folderlimit` is defined but not actually implemented in harvest.py as of the last commit
 
 ---
 
@@ -126,6 +152,7 @@ Bash:
 
 ### Notes
 
-- Update the placeholder API keys in each script before running.
+- Update the placeholder API keys in each script before running. NOTE: Your organization may not allow it
 - Each environment has its own `BASE_URL`, `API_KEY`, and default output prefix.
 - The scripts invoke `harvest.py` from the repository directory so they work from the repo root.
+- You can tailor these scripts to use harvest.exe instead.
