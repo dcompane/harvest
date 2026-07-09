@@ -219,12 +219,9 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None):
             description="List of Control-M Servers with details such as type, version, and status",
             direction="horizontal" )
 
-    all_parms = []
     for server in srvs_up:
         print_debug(f"Server parameters for {server}: {svr_def}", Utility.debug)
         svr_def = client.config_server_params(server=server)
-
-
 
         for item in svr_def:
             item.update({"server": server})
@@ -234,9 +231,10 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None):
             direction="horizontal", columns=None)
 
     all_jobs={"Folders":[]}
+    all_folders = []
+
     for srv in srvs_up or []:
         folders = client.deploy_folders(server=srv)
-        all_folders = []
         # \ is continuation line
         for folder_name in folders.keys():
             fldr_toadd = {}
@@ -279,7 +277,7 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None):
                 fldr_toadd["Jobs #"] = JobCount
                 fldr_toadd["Jobs Depth"] = JobDepth
 
-            all_folders.append(fldr_toadd)
+        all_folders.append(fldr_toadd)
 
     excel.add_table("Folders", all_folders,
                 table_title="Folders",
