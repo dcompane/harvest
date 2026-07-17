@@ -30,9 +30,44 @@ SAFE FOR LARGE ENVIRONMENTS
 No bulk download of all jobs. All job inspection is folder-scoped.
 """
 
+# BSD 3-Clause License
+
+# Copyright (c) 2021, 2025, BMC Software, Inc.; Daniel Companeetz
+# All rights reserved.
+
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# SPDX-License-Identifier: BSD-3-Clause
+# For information on SDPX, https://spdx.org/licenses/BSD-3-Clause.html
+
 from __future__ import annotations
 
 # from csv import excel
+from csv import excel
+from importlib.metadata import metadata
 import os
 import sys
 from datetime import datetime
@@ -241,9 +276,9 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None,
     for server in servers:
         svr_def = client.config_server_definition(server["name"])
         if rows is None:
-            rows = [{**server, **svr_def}]
+            rows = [{**svr_def, **server}]
         else:
-            rows.append({**server, **svr_def})
+            rows.append({**svr_def, **server})
 
     srvs_up = [s["name"] for s in rows if isinstance(s, dict) and s.get("state") == "Up" or []]
     srvs_dist_up = [s["name"] for s in rows if isinstance(s, dict) and s.get("state") == "Up"
@@ -575,11 +610,19 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None,
             tab_color=Utility.colors["light_blue"]
             )
 
+    # Add License sheet
 
+    excel.add_table("License", Utility.BSD_3_license,
+            table_title="BSD-3 License",
+            description=("BSD 3-Clause License text for the Control-M Inventory report."),
+            index=0,
+            tab_color=Utility.colors["light_green"]
+            )
+
+    file_name = os.path.join(os.getcwd(), args.output)
     # It's a wrap!
-    current_dir_os = os.getcwd()
-    excel.save(args.output)
-    print(f"\n✅ Inventory workbook created in {current_dir_os}{os.path.sep}{args.output}")
+    excel.save(file_name)
+    print(f"\n✅ Inventory workbook created in {file_name}")
 
     return 0
 

@@ -6,6 +6,7 @@ import platform
 from typing import Any, Optional
 import json
 
+from click import style
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import Table, TableStyleInfo
