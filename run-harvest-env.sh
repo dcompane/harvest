@@ -11,6 +11,9 @@ fi
 
 ENV="$1"
 
+## Remember that base URLs for SaaS environments have the "-aapi" suffix in the host name
+##    and that you do not need to specify the port number as it uses standard HTTPS port 443.
+
 case "$ENV" in
   dev)
     BASE_URL="https://dev-aapi.example.com:8443/automation-api"

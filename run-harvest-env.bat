@@ -10,6 +10,10 @@ if /I "%ENV%"=="test" goto test
 if /I "%ENV%"=="prod" goto prod
 goto usage
 
+REM Remember that base URLs for SaaS environments have the "-aapi" suffix in the host name
+REM   and that you do not need to specify the port number as it uses standard HTTPS port 443.
+
+
 :dev
 set "BASE_URL=https://dev-aapi.example.com:8443/automation-api"
 set "API_KEY=<YOUR_DEV_API_KEY>"

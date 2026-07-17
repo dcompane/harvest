@@ -7,7 +7,24 @@ from typing import Any, Dict, Optional, Iterable, Tuple, List
 
 debug = False
 isSaaS = False
-harvest_version = "1.0.0"
+harvest_version = "0.1.0"
+
+colors = {
+    "blue": "FF1F4E78",
+    "red": "FFFF0000",
+    "green": "FF00FF00",
+    "yellow": "FFFFFF00",
+    "orange": "FFFFA500",
+    "purple": "FF800080",
+    "gray": "FF808080",
+    "light_blue": "FFADD8E6",
+    "light_red": "FFFFAFAF",
+    "light_green": "FF90EE90",
+    "light_yellow": "FFFFFFE0",
+    "light_orange": "FFFFE5B4",
+    "light_purple": "FFE6E6FA",
+    "light_gray": "FFD3D3D3",
+    }
 
 # =============================================================================
 # Utility
@@ -23,6 +40,7 @@ def parse_include(val: str):
     return parts or allowed
 
 def str_to_bool(value: str) -> bool:
+    """Convert a string to a boolean value."""
     return value.strip().lower() == "true"
 
 def print_debug(string: str, de_bug: bool = debug):
@@ -88,6 +106,14 @@ def count_key_value_matches(
 ###############################################################################
 
 def extract_key_paths(data, keys):
+    """Extracts the values for a sequence of keys from nested dictionaries and lists.
+    Args:
+        data: The nested data structure (dicts and lists).
+        keys: A list of keys to extract from each dictionary.
+
+    Returns:
+        A list of dictionaries containing the extracted key-value pairs.
+    """
     results = []
     # set()  # use a set for uniqueness
 

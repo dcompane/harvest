@@ -39,7 +39,9 @@ class ExcelWorkbookWriter:
         gap_rows: int =2,
         table_title: str = None,
         description: str = None,
-        columns: Optional[list] = None
+        columns: Optional[list] = None,
+        index: Optional[int] = None,
+        tab_color: Optional[str] = None
     ):
         """
         Add a dataset to an existing sheet as a separate table.
@@ -50,7 +52,14 @@ class ExcelWorkbookWriter:
         
 
         if sheet_name not in self.wb.sheetnames:
-            ws = self.wb.create_sheet(sheet_name[:31])
+            # index must be always positive. If not, create as last sheet
+            if index is not None and index >= 0:
+                # Otherwise, insert at index position (0-based) in the workbook's sheet list
+                ws = self.wb.create_sheet(sheet_name[:31], index=index)
+            else:
+                ws = self.wb.create_sheet(sheet_name[:31])
+
+            ws.sheet_properties.tabColor = tab_color if tab_color else None
         else:
             ws = self.wb[sheet_name]
 

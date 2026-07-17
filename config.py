@@ -74,16 +74,19 @@ def harvest_em_settings(client, excel):
         print_debug(f"Error harvesting EM DB Details: {db_details['errors']}", debug)
     else:
         excel.add_table(
-            "Metadata",db_details,
+            "Misc",db_details,
             table_title="Config EM DB Details",
             description="Control-M EM DB Details",
             direction="vertical")
-        db_space = client.config_emdb_space()
-        excel.add_table(
-            "Metadata",db_space[0],
-            table_title="Config EM DB Space",
-            description="Control-M EM DB Space", 
-            direction="vertical")
+        if Utility.isSaaS:
+            print_debug("Skipping EM DB Space harvest for SaaS environment.", debug)
+        else:
+            db_space = client.config_emdb_space()
+            excel.add_table(
+                "Misc",db_space[0],
+                table_title="Config EM DB Space",
+                description="Control-M EM DB Space",
+                direction="vertical")
 
 if __name__ == "__main__":
     assert "You should not be here, you should not be around" == "True"

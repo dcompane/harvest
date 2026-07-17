@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#! /usr/bin/env python3
 """
 ctm_inventory.py
 
@@ -94,25 +94,79 @@ def collect_agent_job_counts(folders: dict, agent: str, server: str):
 # Metadata
 # =============================================================================
 
-def metadata_worksheet(client: ControlMApi):
+def metadata_worksheet_prep(client: ControlMApi, start: datetime):
     """
-    Create the Metadata worksheet with AAPI status information.
+    Create the metadata  with AAPI status information.
+    It will be used later to create the Metadata worksheet with the end time and elapsed time.
     """
+    print("Processing the Metadata prep collection...")
     parsed = urlparse(client.base_url)
     status_line = split_status(client.get_status())
+    Utility.isSaaS = True if status_line[3].find("true") != -1 else False
     metadata = {
-        "Timestamp": datetime.now().isoformat(),
+        "Started at": start.isoformat(),
+        "Ended at": "",
+        "Elapsed Seconds": "",
+        "Harvest Version": Utility.harvest_version,
         "AAPI Base URL": client.base_url,
         "AAPI Host": parsed.hostname,
         "AAPI Version": client.get_version(),
         "AAPI Status:": status_line[1],
-        "AAPI SaaS:": status_line[3],
+        "AAPI SaaS:": Utility.isSaaS,
         "AAPI GSR Heartbeat:": status_line[5] if len(status_line) > 4 else "N/A",
         "AAPI CSM Heartbeat:": status_line[6] if len(status_line) > 5 else "N/A"
     }
-    Utility.isSaaS = True if status_line[3].find("true") != -1 else False
+
     print(f"Control-M environment is SaaS: {Utility.isSaaS}")
     return metadata
+
+def metadata_worksheet(metadata: dict, start: datetime):
+    """
+    Create the Metadata worksheet with AAPI status information.
+    """
+    print("Processing the Metadata worksheet...")
+    end_time = datetime.now()
+    duration = end_time - start
+
+    metadata["Ended at"] = end_time.isoformat()
+    metadata["Elapsed Seconds"]=  duration.total_seconds()
+
+    print(f"Data collection completed at {end_time.isoformat()} "
+          f"(Elapsed time: {duration.total_seconds()} seconds)")
+
+    return metadata
+
+def misc_metrics_worksheet(client: ControlMApi):
+    """
+    Create the misc metrics worksheet with AAPI status information.
+    """
+    print("Processing the Miscellaneous Metrics worksheet...")
+    
+    misc_metrics = { "metrics": {
+        "job defs @dc01":" ",
+        "# Cyclic Jobs": " ",
+        "# Cyclic Jobs with Retention NOT 0": " ",
+        "# Non Cyclic Jobs with Retention 0": " ",
+        "# Jobs run within last year (since 2025-07-08)": " ",
+        "# Jobs run within last 2 years (since 2024-07-08)": " ",
+        "# Jobs run within last 3 years (since 2023-07-08)": " ",
+        "# Jobs NOT run for 3 years (2023-07-08 or older)": " ",
+        "# Jobs with Variables": " ",
+        "# Jobs with LIBMEMSYM etc Variables": " ",
+        "# Critical Jobs": " ",
+        "# Confirm Jobs": " ",
+        "# Multi-Agent Jobs": " ",
+        "Active in Future": " ",
+        "Active Until has Past": " ",
+        "Using PRE or POST CMD": " ",
+        "# with Retro": " ",
+        "# Workspaces": " ",
+        "# Workspace Folders": " ",
+        "# Workspace Jobs": " "
+        }
+    }
+
+    return misc_metrics
 
 def split_status(status_lines):
     """Split the status lines into a dictionary."""
@@ -120,27 +174,11 @@ def split_status(status_lines):
     line_vars = {i + 1: line for i, line in enumerate(lines)}
     return line_vars
 
-#Job Counts
-# =============================================================================
-def job_counts_worksheet(servers, client: ControlMApi):
-    """Create the Job Counts per Control-M server worksheet."""
-    config_servers = client.config_servers(servers)
-
-    return config_servers
-
-#Agent Counts
-# =============================================================================
-def agent_counts_worksheet(servers, client: ControlMApi):
-    """Create the Agent Counts worksheet."""
-    config_servers = client.config_servers(servers)
-
-    return config_servers
-
 # =============================================================================
 # Main
 # =============================================================================
-
-def main(debug: bool = False, argv: Optional[Iterable[str]] = None):
+def main(debug: bool = False, argv: Optional[Iterable[str]] = None, 
+         start: Optional[datetime] = None):
     """Main entry point for the inventory exporter."""
 
     parser = argparse.ArgumentParser(
@@ -189,9 +227,8 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None):
 
     client.initial_test()
 
-    # Metadata is always included
-    # excel.add_sheet("Metadata")
-    excel.add_table("Metadata", metadata_worksheet(client), direction="vertical", table_title="Metadata", description="Control-M Automation API environment metadata such as version, status, and host information")
+    # Metadata worksheet prep
+    metadata = metadata_worksheet_prep(client, start=start)
 
     # Control-M Servers are always included
     servers = client.config_servers()
@@ -212,6 +249,8 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None):
     srvs_dist_up = [s["name"] for s in rows if isinstance(s, dict) and s.get("state") == "Up"
                     and s.get("type") == "Distributed" or []]
     print_debug(f"Distributed servers: {srvs_dist_up}", Utility.debug)
+
+
 
 
     print_debug(f"Creating Config Servers worksheet: {len(rows)} rows", Utility.debug)
@@ -277,7 +316,7 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None):
                 fldr_toadd["Jobs #"] = JobCount
                 fldr_toadd["Jobs Depth"] = JobDepth
 
-        all_folders.append(fldr_toadd)
+            all_folders.append(fldr_toadd)
 
     excel.add_table("Folders", all_folders,
                 table_title="Folders",
@@ -300,7 +339,7 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None):
         for srv in srvs_dist_up:
             # agents for a svr
             agents = client.config_agents(srv)
-            upgrades = client.provision_upgrades(type="Agent")
+            upgrades = client.provision_upgrades(data_type="Agent")
             for _, agent in agents.items():
                 for _, agent_item in enumerate(agent):
                     agent_item["server"] = srv
@@ -442,10 +481,10 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None):
                         table_title="Provision Images - Windows",
                         description="List of available Control-M provision images for Windows")
         if not Utility.isSaaS:
-            excel.add_table("Upgrades", client.provision_upgrades(type="Agent"),
+            excel.add_table("Upgrades", client.provision_upgrades(data_type="Agent"),
                         table_title="Provision Upgrades - Agents",
                         description="List of available agent upgrade packages")
-            excel.add_table("Upgrades", client.provision_upgrades(type="MFT"),
+            excel.add_table("Upgrades", client.provision_upgrades(data_type="MFT"),
                         table_title="Provision Upgrades - MFT",
                         description="List of available agent upgrade packages")
             excel.add_table("Upgrades", client.provision_upgrade_versions(),
@@ -472,10 +511,11 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None):
 
         # ---- Deploy - App-SubApps ----
         print_debug("Collecting App-SubApp data...", Utility.debug)
-        apps = Utility.count_job_combinations(all_jobs, ["ControlmServer", "Application", "SubApplication"])
+        apps = Utility.count_job_combinations(all_jobs, 
+                    ["ControlmServer", "Application", "SubApplication"])
 
         excel.add_table("App-SubApps", apps, table_title="AppSubApps",
-            description="List of all jobs in the deployment with details such as folder, server, and job type")
+            description="List of all jobs in the deployment with ""details such as folder, server, and job type")
         
         # ---- Deploy - Calendars ----
         print_debug("Collecting Calendar data...", Utility.debug)
@@ -517,10 +557,31 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None):
             description=f"List of all calendars. {message}")
 
 
+    # ---- Misc ----
+    misc_metrics = misc_metrics_worksheet(client)
+
+    excel.add_table("Misc", misc_metrics["metrics"], table_title="Miscellaneous Metrics",
+        description="List of miscellaneous metrics.", direction="vertical", index=1,
+        tab_color=Utility.colors["light_blue"]
+        )
+
+    # Metadata is always included
+    # excel.add_sheet("Metadata")
+    excel.add_table("Metadata", metadata_worksheet(metadata, start_time),
+            direction="vertical", table_title="Metadata",
+            description=("Control-M Automation API environment metadata "
+                     "such as version, status, and host information"),
+            index=0,
+            tab_color=Utility.colors["light_blue"]
+            )
+
+
     # It's a wrap!
     current_dir_os = os.getcwd()
     excel.save(args.output)
     print(f"\n✅ Inventory workbook created in {current_dir_os}{os.path.sep}{args.output}")
+
+    return 0
 
 
 # =============================================================================
@@ -529,4 +590,5 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None):
 if __name__ == "__main__":
     print("Starting Control-M Inventory...")
     print(f"harvest version: {Utility.harvest_version}")
-    sys.exit(main(debug=Utility.debug)) 
+    start_time = datetime.now()
+    sys.exit(main(debug=Utility.debug, start=start_time))
