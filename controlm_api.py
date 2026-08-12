@@ -107,11 +107,16 @@ class ControlMApi:
         print ("Retrieving status...")
         return self._get("/status")
 
-    def get_version(self):
-        """Return the Control-M Automation API status metadata."""
-        print ("Retrieving version...")
+    def get_build_time(self):
+        """Return the Control-M Automation API build time."""
+        print ("Retrieving build time...")
         return self._get("/build_time.txt")
 
+    def get_version(self):
+        """Return the Control-M Automation API version."""
+        print ("Retrieving version...")
+        return self._get("/automation-api-version.txt")
+    
     # ---- Build ----
     def build(self, data: Dict[str, Any]):
         """Build service."""

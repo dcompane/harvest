@@ -137,6 +137,7 @@ def metadata_worksheet_prep(client: ControlMApi, start: datetime):
     print("Processing the Metadata prep collection...")
     parsed = urlparse(client.base_url)
     status_line = split_status(client.get_status())
+    version_line = split_status(client.get_version())
     Utility.isSaaS = True if status_line[3].find("true") != -1 else False
     metadata = {
         "Started at": start.isoformat(),
@@ -145,11 +146,14 @@ def metadata_worksheet_prep(client: ControlMApi, start: datetime):
         "Harvest Version": Utility.harvest_version,
         "AAPI Base URL": client.base_url,
         "AAPI Host": parsed.hostname,
-        "AAPI Version": client.get_version(),
+        "AAPI Version": client.get_build_time(),
         "AAPI Status:": status_line[1],
         "AAPI SaaS:": Utility.isSaaS,
         "AAPI GSR Heartbeat:": status_line[5] if len(status_line) > 4 else "N/A",
-        "AAPI CSM Heartbeat:": status_line[6] if len(status_line) > 5 else "N/A"
+        "AAPI CSM Heartbeat:": status_line[6] if len(status_line) > 5 else "N/A",
+        "AAPI Endpoint Version:": version_line[1] if len(version_line) > 0 else "N/A",
+        "AAPI Installed Version:": version_line[2] if len(version_line) > 1 else "N/A",
+        "AAPI Installed Name:": version_line[3] if len(version_line) > 2 else "N/A"
     }
 
     print(f"Control-M environment is SaaS: {Utility.isSaaS}")
@@ -267,18 +271,21 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None,
 
     # Control-M Servers are always included
     servers = client.config_servers()
-    # server_names = [
-    #     s["name"] for s in servers if isinstance(s, dict)
-    #     #s["name"] for s in servers if isinstance(s, dict) and s.get("state") == "Up" 
-    # ]
-
     rows = None
     for server in servers:
         svr_def = client.config_server_definition(server["name"])
+        server_def = {}
+        # Change the "version" key to "version GW" in the server definition dictionary
+        for k, v in svr_def.items():
+            if k == "version":
+                server_def["version GW"] = v
+            else:
+                server_def[k] = v
+        # add the server definition to the rows list with the server reference
         if rows is None:
-            rows = [{**svr_def, **server}]
+            rows = [{**server, **server_def}]
         else:
-            rows.append({**svr_def, **server})
+            rows.append({**server, **server_def})
 
     srvs_up = [s["name"] for s in rows if isinstance(s, dict) and s.get("state") == "Up" or []]
     srvs_dist_up = [s["name"] for s in rows if isinstance(s, dict) and s.get("state") == "Up"
@@ -478,7 +485,9 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None,
                 {"actualDbSize": archive_stats["summary"]["actualDbSize"] if "actualDbSize" in archive_stats["summary"].keys() else None},
                 {"diskUsage": archive_stats["summary"]["diskUsage"] if "diskUsage" in archive_stats["summary"].keys() else None}
             ]
-            excel.add_table("Archive", rules_stats_summary, table_title="Archive Rules Summary", description="Summary of Control-M Archive Rules statistics such as total number of archived jobs and data size")
+            excel.add_table("Archive", rules_stats_summary, table_title="Archive Rules Summary", 
+                description="Summary of Control-M Archive Rules statistics such as total number of archived jobs and data size", 
+                direction="vertical")
 
             all_archive = []
             for rule in archive_stats["rulesStatisticList"].get("ruleStatistics",[]):
@@ -499,7 +508,7 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None,
                 all_archive.append(rule_toadd)
 
 
-            excel.add_table("Archive Rules", archive_rules, table_title="Config Archive Rules",
+            excel.add_table("Archive Rules", all_archive, table_title="Config Archive Rules",
                 description="List of Control-M Archive Rules with details "+
                     "such as name, type, and retention period")
 
@@ -556,63 +565,70 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None,
         print_debug("Collecting Calendar data...", Utility.debug)
         calendars = client.deploy_calendars()
 
-        all_calendars = []
-
-        if "message" in calendars:
-            message = calendars.get("message", "")
-            for calendar in calendars["calendars"]:
-                calendar_toadd = {}
-                calendar_toadd["server"] = calendar.get("Server", "*")
-                calendar_toadd["name"] = calendar.get("Name", "Undefined")
-                calendar_toadd["Type"] = calendar["Type"].split(":")[1] if "Type" in calendar.keys() else None
-                calendar_toadd["Alias"] = calendar.get("Alias", "N/A")
-                calendar_toadd["Description"] = calendar.get("Description", "")
-                calendar_toadd["When"] = ""
-                if calendar_toadd["Type"] == "Regular":
-                    calendar_toadd["When"] = Utility.get_values_for_key(calendar["When"]["Years"], "Year") if "When" in calendar.keys() else "No information available"
-                all_calendars.append(calendar_toadd)
+        if "errors" in calendars.keys():
+            print(f"Errors found in calendars: {calendars['errors']}") 
         else:
-            message = ""
-            for name, calendar in calendars.items():
-                calendar_toadd = {}
-                calendar["server"] = calendar.get("Server", "*")
-                calendar_toadd["name"] = name
-                calendar_toadd["Type"] = calendar["Type"].split(":")[1] \
-                        if "Type" in calendar.keys() else None
-                calendar_toadd["Alias"] = calendar.get("Alias", "N/A")
-                calendar_toadd["Description"] = calendar.get("Description", "")
-                calendar_toadd["When"] = ""
-                if calendar_toadd["Type"] == "Regular":
-                    calendar_toadd["When"] = Utility. \
-                    get_values_for_key(calendar["When"]["Years"], "Year")
+            all_calendars = []
 
-                all_calendars.append(calendar_toadd)
+            if "message" in calendars:
+                message = calendars.get("message", "")
+                for calendar in calendars["calendars"]:
+                    calendar_toadd = {}
+                    calendar_toadd["server"] = calendar.get("Server", "*")
+                    calendar_toadd["name"] = calendar.get("Name", "Undefined")
+                    calendar_toadd["Type"] = calendar["Type"].split(":")[1] if "Type" in calendar.keys() else None
+                    calendar_toadd["Alias"] = calendar.get("Alias", "N/A")
+                    calendar_toadd["Description"] = calendar.get("Description", "")
+                    calendar_toadd["When"] = ""
+                    if calendar_toadd["Type"] == "Regular":
+                        calendar_toadd["When"] = Utility.get_values_for_key(calendar["When"]["Years"], "Year") if "When" in calendar.keys() else "No information available"
+                    all_calendars.append(calendar_toadd)
+            else:
+                message = ""
+                for name, calendar in calendars.items():
+                    calendar_toadd = {}
+                    calendar["server"] = calendar.get("Server", "*")
+                    calendar_toadd["name"] = name
+                    calendar_toadd["Type"] = calendar["Type"].split(":")[1] \
+                            if "Type" in calendar.keys() else None
+                    calendar_toadd["Alias"] = calendar.get("Alias", "N/A")
+                    calendar_toadd["Description"] = calendar.get("Description", "")
+                    calendar_toadd["When"] = ""
+                    if calendar_toadd["Type"] == "Regular":
+                        calendar_toadd["When"] = Utility. \
+                        get_values_for_key(calendar["When"]["Years"], "Year")
 
-        excel.add_table("Calendars", all_calendars, table_title="Calendars",
-            description=f"List of all calendars. {message}")
+                    all_calendars.append(calendar_toadd)
+
+            excel.add_table("Calendars", all_calendars, table_title="Calendars",
+                description=f"List of all calendars. {message}")
 
 
     # ---- Misc ----
     misc_metrics = misc_metrics_worksheet(client)
-
-    excel.add_table("Misc", misc_metrics["metrics"], table_title="Miscellaneous Metrics",
-        description="List of miscellaneous metrics.", direction="vertical", index=1,
+    worksheet_name="Misc"
+    print(f"Adding {worksheet_name} worksheet...")
+    excel.add_table(worksheet_name, misc_metrics["metrics"], table_title="Miscellaneous Metrics",
+        description="List of miscellaneous metrics.", direction="vertical", index=2,
         tab_color=Utility.colors["light_blue"]
         )
 
     # Metadata is always included
     # excel.add_sheet("Metadata")
-    excel.add_table("Metadata", metadata_worksheet(metadata, start_time),
+    worksheet_name="Metadata"
+    print(f"Adding {worksheet_name} worksheet...")
+    excel.add_table(worksheet_name, metadata_worksheet(metadata, start_time),
             direction="vertical", table_title="Metadata",
             description=("Control-M Automation API environment metadata "
                      "such as version, status, and host information"),
-            index=0,
+            index=1,
             tab_color=Utility.colors["light_blue"]
             )
 
     # Add License sheet
-
-    excel.add_table("License", Utility.BSD_3_license,
+    worksheet_name="License"
+    print(f"Adding {worksheet_name} worksheet...")
+    excel.add_table(worksheet_name, Utility.BSD_3_license,
             table_title="BSD-3 License",
             description=("BSD 3-Clause License text for the Control-M Inventory report."),
             index=0,

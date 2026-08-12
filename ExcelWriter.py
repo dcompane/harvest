@@ -212,7 +212,7 @@ class ExcelWorkbookWriter:
         for col in ws.columns:
             max_len = max(len(str(c.value)) if c.value else 0 for c in col)
             ws.column_dimensions[get_column_letter(col[0].column)].width = min(
-                max_len + 2, 60
+                max_len + 2, 85
             )
 
     # Convert numeric-looking strings to actual numbers

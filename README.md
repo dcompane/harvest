@@ -4,9 +4,11 @@ Harvest Control-M Data using the AAPI
 
 # Step 1: Obtain an admin AAPI token
 
-* Download the [harvest.zip](https://github.com/dcompane/harvest/blob/main/dist/harvest.zip) file to expand harvest.ex
+* Obtain from Control-M an API token that has assigned full admin rights
 
 # Step 2: Run the harvest package
+
+* Download the [harvest.zip](https://github.com/dcompane/harvest/blob/main/dist/harvest.zip) file to expand harvest.ex
 
 ## Run harvest.exe from the Windows command line
 
@@ -17,6 +19,8 @@ tar -zxvf  harvest.zip
 ```
 
 harvest.exe is expanded
+
+You can also download the exe file, but that may not be allowed on your organization. (NOTE: you cannot use the save as right -click option, but need to be downloaded from the icon at the github page)
 
 ### Run in a cmd window
 
