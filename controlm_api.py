@@ -102,6 +102,7 @@ class ControlMApi:
                       f"{test['errors']}. Verify the API key.")
                 sys.exit(25)
 
+
     def get_status(self):
         """Return the Control-M Automation API status metadata."""
         print ("Retrieving status...")

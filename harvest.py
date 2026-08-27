@@ -227,9 +227,9 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None,
     parser.add_argument("--base-url", required=True, 
             help="Base URL of the Control-M Automation API"+
                 " (e.g. https://aapi.example.com:8443/automation-api)")
-    parser.add_argument("--api-key", required=False, 
+    parser.add_argument("--api-key", required=False,
             help="Control-M Automation API key with appropriate permissions")
-    parser.add_argument("--include", default="deploy,config,auth", 
+    parser.add_argument("--include", default="deploy,config,auth",
             help="Comma-separated list of datasets to include (deploy, config, auth)")
     parser.add_argument("--zos-library", default=None, 
             help="(Optional) z/OS library name to filter deploy data for z/OS environments")
@@ -251,10 +251,14 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None,
     print_debug(f"Default debug is {args.debug}", True)
 
     if not args.api_key:
-        args.api_key = getpass.getpass(prompt="Enter Control-M API key: ", echo_char="*")
-        if bool(args.api_key) == False:
-            print("Error: API key is required.")
-            sys.exit(42)
+        try:
+            args.api_key = getpass.getpass(prompt="Enter Control-M API key: ", echo_char="*")
+            if not args.api_key:
+                print("Error: API key cannot be empty.")
+                raise ValueError("API key is required.")
+        except (EOFError, KeyboardInterrupt, ValueError):
+            print("\nAPI key input cancelled. the API key is required to run harvest")
+            return
 
     includes = Utility.parse_include(args.include)
     print_debug(f"Current debug is {args.debug}", True)

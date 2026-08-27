@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional, Iterable, Tuple, List
 
 debug = False
 isSaaS = False
-harvest_version = "v0.1.2"
+harvest_version = "v0.1.3"
 
 colors = {
     "blue": "FF1F4E78",
