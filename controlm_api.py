@@ -96,6 +96,7 @@ class ControlMApi:
             print(f"Error connecting to Control-M API: {e}." \
                   " Verify the URL or API key.")
             sys.exit(24)
+
         if isinstance(test, dict):
             if "errors" in test.keys():
                 print(f"Error connecting to Control-M API: " \
@@ -117,7 +118,7 @@ class ControlMApi:
         """Return the Control-M Automation API version."""
         print ("Retrieving version...")
         return self._get("/automation-api-version.txt")
-    
+
     # ---- Build ----
     def build(self, data: Dict[str, Any]):
         """Build service."""

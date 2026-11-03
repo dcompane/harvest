@@ -321,7 +321,7 @@ def main(debug: bool = False, argv: Optional[Iterable[str]] = None,
     for srv in srvs_up or []:
         folders = client.deploy_folders(server=srv)
         # \ is continuation line
-        for folder_name in folders.keys():
+        for folder_name in sorted(folders.keys()):
             fldr_toadd = {}
             fldr_toadd["folder"] = folder_name
             fldr_toadd["Type"] = folders[folder_name]["Type"] \
